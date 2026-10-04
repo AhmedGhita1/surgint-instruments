@@ -54,6 +54,14 @@ def test_console_has_four_explicit_operator_states() -> None:
     assert 'const order = ["capture", "review", "finalize"]' in source
 
 
+def test_completed_steps_fill_their_connecting_tracks() -> None:
+    source = console_source()
+
+    assert ".step.complete:not(:last-child)::after" in source
+    assert "height: 5px;" in source
+    assert "background: var(--success);" in source
+
+
 def test_console_uses_approved_branding_and_operator_metrics() -> None:
     source = console_source()
     normalized = source.lower()
