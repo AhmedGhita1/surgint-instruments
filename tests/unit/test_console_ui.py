@@ -1,0 +1,125 @@
+"""Static contract tests for the packaged operator console."""
+
+from html.parser import HTMLParser
+from pathlib import Path
+
+
+CONSOLE = Path(__file__).parents[2] / "services" / "api" / "static" / "index.html"
+
+
+class ConsoleParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: list[str] = []
+        self.labels_for: set[str] = set()
+        self.required_selects: set[str] = set()
+        self.views: set[str] = set()
+        self.buttons_without_type: list[str | None] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        element_id = values.get("id")
+        if element_id:
+            self.ids.append(element_id)
+        if tag == "label" and values.get("for"):
+            self.labels_for.add(values["for"])
+        if tag == "select" and "required" in values and element_id:
+            self.required_selects.add(element_id)
+        if values.get("data-view"):
+            self.views.add(values["data-view"])
+        if tag == "button" and "type" not in values:
+            self.buttons_without_type.append(element_id)
+
+
+def console_source() -> str:
+    return CONSOLE.read_text(encoding="utf-8")
+
+
+def console_parser() -> ConsoleParser:
+    parser = ConsoleParser()
+    parser.feed(console_source())
+    return parser
+
+
+def test_console_has_four_explicit_operator_states() -> None:
+    source = console_source()
+    parser = console_parser()
+
+    assert parser.views == {"initial", "live", "review", "final"}
+    assert '<body data-state="initial">' in source
+    assert "Start a new scan" in source
+    assert "Live scan" in source
+    assert "Review handling context" in source
+    assert "Inventory ready" in source
+    assert 'const order = ["capture", "review", "finalize"]' in source
+
+
+def test_console_uses_approved_branding_and_operator_metrics() -> None:
+    source = console_source()
+    normalized = source.lower()
+
+    assert "Surgical Intelligence" in source
+    assert "PROTOTYPE" in source
+    assert "NOT FOR CLINICAL USE" in source
+    assert "objects in view" in normalized
+    assert "elapsed" in normalized
+    assert "frames processed" not in normalized
+    assert "Research demonstration only. Not for clinical decisions." in source
+
+
+def test_context_inputs_are_labeled_and_require_confirmation() -> None:
+    source = console_source()
+    parser = console_parser()
+
+    assert {"workflow-stage", "use-state", "contamination"} <= parser.labels_for
+    assert parser.required_selects == {"workflow-stage", "use-state", "contamination"}
+    assert "elements.contextForm.reset();" in source
+    assert 'elements.generate.disabled = !valid' in source
+
+
+def test_interactive_controls_have_explicit_button_types_and_unique_ids() -> None:
+    parser = console_parser()
+
+    assert parser.buttons_without_type == []
+    assert len(parser.ids) == len(set(parser.ids))
+
+
+def test_console_has_responsive_and_accessible_status_treatment() -> None:
+    source = console_source()
+
+    assert "@media (max-width: 900px)" in source
+    assert "@media (max-width: 600px)" in source
+    assert "@media (prefers-reduced-motion: reduce)" in source
+    assert 'role="alert"' in source
+    assert 'role="status"' in source
+    assert 'aria-current="step"' in source
+    assert 'aria-pressed="true"' in source
+
+
+def test_results_are_mapped_to_human_readable_action_groups() -> None:
+    source = console_source()
+
+    for label in (
+        "Needs review",
+        "Secure for reprocessing",
+        "Send for reprocessing",
+        "Sharps disposal",
+        "General waste",
+    ):
+        assert label in source
+
+    assert "renderTechnicalDetails(finalized.items)" in source
+    assert 'link.download = "surgical-intelligence-inventory.json"' in source
+
+
+def test_console_wires_session_lifecycle_through_signed_api_urls() -> None:
+    source = console_source()
+
+    assert 'get("__sign")' in source
+    assert 'apiUrl("/v1/sessions")' in source
+    assert '"/frames"' in source
+    assert '"/finalize"' in source
+    assert 'method: "DELETE"' in source
+    assert "keepalive: true" in source
+    assert "requestVideoFrameCallback(showFrame)" in source
+    assert "presentedFrames - lastInferenceFrame" in source

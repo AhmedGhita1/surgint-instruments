@@ -56,14 +56,21 @@ def test_console_is_served_from_the_package() -> None:
     with TestClient(create_app(settings)) as client:
         response = client.get("/")
         assert response.status_code == 200
-        assert "INVENTORY" in response.text
+        assert "Surgical Intelligence" in response.text
+        assert "PROTOTYPE" in response.text
+        assert "NOT FOR CLINICAL USE" in response.text
+        assert 'data-view="initial"' in response.text
+        assert 'data-view="live"' in response.text
+        assert 'data-view="review"' in response.text
+        assert 'data-view="final"' in response.text
         assert 'get("__sign")' in response.text
         assert 'fetch(apiUrl("/v1/sessions")' in response.text
         assert "INFERENCE_FRAME_STRIDE = 5" in response.text
         assert "requestVideoFrameCallback(showFrame)" in response.text
         assert "presentedFrames - lastInferenceFrame" in response.text
-        assert "Research demonstration only" not in response.text
-        assert "finalize to see the inventory" not in response.text
-        assert "latestDetections = result.detections" in response.text
+        assert "Research demonstration only. Not for clinical decisions." in response.text
+        assert "frames processed" not in response.text.lower()
+        assert "objects in view" in response.text
+        assert "latestDetections = detections" in response.text
         assert 'method: "DELETE"' in response.text
         assert "keepalive: true" in response.text
