@@ -254,7 +254,7 @@
   .checklist ul { padding: 0; margin: 0; list-style: none; }
   .checklist li { display: flex; gap: 10px; padding: 10px 0; color: var(--muted); border-top: 1px solid var(--border); }
   .checklist li::before { content: "✓"; color: var(--success); font-weight: 800; }
-  .research-note, .guidance {
+  .guidance {
     display: flex;
     gap: 10px;
     padding: 13px 15px;
@@ -265,9 +265,8 @@
     font-size: 13px;
     line-height: 1.4;
   }
-  .research-note { margin-top: 14px; }
   .guidance { margin: 14px 0; }
-  .research-note::before, .guidance::before { content: "!"; color: var(--warning); font-weight: 900; }
+  .guidance::before { content: "!"; color: var(--warning); font-weight: 900; }
   .alert {
     margin-bottom: 14px;
     padding: 12px 14px;
@@ -492,7 +491,6 @@
             <li>Move slowly across the tray</li>
           </ul>
         </div>
-        <div class="research-note">Research demonstration only. Not for clinical decisions.</div>
       </section>
 
       <section class="view" data-view="live" hidden>
@@ -532,9 +530,9 @@
           <div class="field">
             <label for="workflow-stage">Procedure stage</label>
             <select id="workflow-stage" name="workflow_stage" required>
-              <option value="post-procedure-clearing">After procedure — clearing the tray</option>
-              <option value="in-procedure">During procedure</option>
-              <option value="pre-procedure-setup">Before procedure — setting up</option>
+              <option value="post-procedure-clearing">Post-procedure — clearing the tray</option>
+              <option value="in-procedure">Intra-procedure — active instrument use</option>
+              <option value="pre-procedure-setup">Pre-procedure — setting up the tray</option>
             </select>
           </div>
           <div class="field">
@@ -550,9 +548,6 @@
               <option value="" selected>Select status</option>
               <option value="not-regulated">No regulated contamination</option>
               <option value="potentially-infectious">Potentially infectious</option>
-              <option value="chemical">Chemical contamination</option>
-              <option value="cytotoxic">Cytotoxic contamination</option>
-              <option value="radioactive">Radioactive contamination</option>
             </select>
             <span class="validation" id="context-validation">Choose a contamination status to continue.</span>
           </div>
@@ -604,17 +599,14 @@ const ACTION_PRESENTATION = {
 
 const CONTEXT_LABELS = {
   workflow: {
-    "post-procedure-clearing": "After procedure",
-    "in-procedure": "During procedure",
-    "pre-procedure-setup": "Before procedure",
+    "post-procedure-clearing": "Post-procedure — clearing the tray",
+    "in-procedure": "Intra-procedure — active instrument use",
+    "pre-procedure-setup": "Pre-procedure — setting up the tray",
   },
   use: { used: "Used", unused: "Unused" },
   contamination: {
     "not-regulated": "No regulated contamination",
     "potentially-infectious": "Potentially infectious",
-    chemical: "Chemical contamination",
-    cytotoxic: "Cytotoxic contamination",
-    radioactive: "Radioactive contamination",
   },
 };
 

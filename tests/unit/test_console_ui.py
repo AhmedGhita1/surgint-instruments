@@ -64,7 +64,7 @@ def test_console_uses_approved_branding_and_operator_metrics() -> None:
     assert "objects in view" in normalized
     assert "elapsed" in normalized
     assert "frames processed" not in normalized
-    assert "Research demonstration only. Not for clinical decisions." in source
+    assert "Research demonstration only. Not for clinical decisions." not in source
 
 
 def test_context_inputs_are_labeled_and_require_confirmation() -> None:
@@ -75,6 +75,24 @@ def test_context_inputs_are_labeled_and_require_confirmation() -> None:
     assert parser.required_selects == {"workflow-stage", "use-state", "contamination"}
     assert "elements.contextForm.reset();" in source
     assert 'elements.generate.disabled = !valid' in source
+
+
+def test_procedure_stages_use_clear_operator_facing_names() -> None:
+    source = console_source()
+
+    assert "Post-procedure — clearing the tray" in source
+    assert "Intra-procedure — active instrument use" in source
+    assert "Pre-procedure — setting up the tray" in source
+
+
+def test_contamination_selector_only_exposes_supported_operator_choices() -> None:
+    source = console_source()
+
+    assert '<option value="not-regulated">No regulated contamination</option>' in source
+    assert '<option value="potentially-infectious">Potentially infectious</option>' in source
+    assert '<option value="chemical">' not in source
+    assert '<option value="cytotoxic">' not in source
+    assert '<option value="radioactive">' not in source
 
 
 def test_interactive_controls_have_explicit_button_types_and_unique_ids() -> None:

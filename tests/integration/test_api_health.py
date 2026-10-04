@@ -68,7 +68,7 @@ def test_console_is_served_from_the_package() -> None:
         assert "INFERENCE_FRAME_STRIDE = 5" in response.text
         assert "requestVideoFrameCallback(showFrame)" in response.text
         assert "presentedFrames - lastInferenceFrame" in response.text
-        assert "Research demonstration only. Not for clinical decisions." in response.text
+        assert "Research demonstration only. Not for clinical decisions." not in response.text
         assert "frames processed" not in response.text.lower()
         assert "objects in view" in response.text
         assert "latestDetections = detections" in response.text
