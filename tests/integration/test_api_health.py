@@ -71,6 +71,10 @@ def test_console_is_served_from_the_package() -> None:
         assert "Research demonstration only. Not for clinical decisions." not in response.text
         assert "frames processed" not in response.text.lower()
         assert "objects in view" in response.text
+        assert "Download report" in response.text
+        assert "Print / save PDF" not in response.text
+        assert "View technical details" in response.text
+        assert "Download technical JSON" in response.text
         assert "latestDetections = detections" in response.text
         assert 'method: "DELETE"' in response.text
         assert "keepalive: true" in response.text

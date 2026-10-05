@@ -371,7 +371,8 @@
   .technical-item { padding: 10px 0; border-top: 1px solid var(--border); }
   .technical-item:first-of-type { border-top: 0; }
   .technical-item p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
-  .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+  .technical-download { width: 100%; margin-top: 12px; }
+  .result-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
   .result-actions .details-button { grid-column: 1 / -1; }
 
   .visually-hidden {
@@ -580,10 +581,15 @@
           </div>
         </div>
         <div class="result-groups" id="result-groups"></div>
-        <div class="technical-details" id="technical-details" hidden></div>
+        <div class="technical-details" id="technical-details" hidden>
+          <div id="technical-content"></div>
+          <button class="button secondary small technical-download" id="export-technical" type="button">
+            Download technical JSON
+          </button>
+        </div>
         <div class="result-actions">
           <button class="button primary small" id="new-scan" type="button">Start new scan</button>
-          <button class="button secondary small" id="export-results" type="button">Export results</button>
+          <button class="button secondary small" id="download-report" type="button">Download report</button>
           <button class="button quiet small details-button" id="toggle-details" type="button" aria-expanded="false">
             View technical details
           </button>
@@ -653,8 +659,10 @@ const elements = {
   contextChips: document.getElementById("context-chips"),
   resultGroups: document.getElementById("result-groups"),
   technicalDetails: document.getElementById("technical-details"),
+  technicalContent: document.getElementById("technical-content"),
   newScan: document.getElementById("new-scan"),
-  exportResults: document.getElementById("export-results"),
+  downloadReport: document.getElementById("download-report"),
+  exportTechnical: document.getElementById("export-technical"),
   toggleDetails: document.getElementById("toggle-details"),
 };
 
@@ -673,6 +681,7 @@ let latestDetections = [];
 let seenClasses = new Map();
 let overlaysEnabled = true;
 let finalizedResult = null;
+let finalizedAt = null;
 
 const hfSign = new URLSearchParams(window.location.search).get("__sign");
 
@@ -885,6 +894,7 @@ function resetSessionData() {
   latestDetections = [];
   seenClasses = new Map();
   finalizedResult = null;
+  finalizedAt = null;
   elements.objectCount.textContent = "0";
   elements.elapsed.textContent = "00:00";
   elements.finishCapture.disabled = true;
@@ -1080,6 +1090,7 @@ async function finalizeSession() {
       throw new Error(detail);
     }
     finalizedResult = await response.json();
+    finalizedAt = new Date();
     renderResults(finalizedResult);
     await deleteSession();
     setState("final");
@@ -1140,10 +1151,10 @@ function createResultGroup(presentation, items) {
 }
 
 function renderTechnicalDetails(items) {
-  elements.technicalDetails.replaceChildren();
+  elements.technicalContent.replaceChildren();
   const heading = document.createElement("h3");
   heading.textContent = "Technical details";
-  elements.technicalDetails.append(heading);
+  elements.technicalContent.append(heading);
   items.forEach(function (item) {
     const block = document.createElement("div");
     block.className = "technical-item";
@@ -1152,7 +1163,7 @@ function renderTechnicalDetails(items) {
     const reason = document.createElement("p");
     reason.textContent = item.reason || "No policy explanation was returned.";
     block.append(label, reason);
-    elements.technicalDetails.append(block);
+    elements.technicalContent.append(block);
   });
 }
 
@@ -1204,24 +1215,94 @@ function renderResults(finalized) {
   renderTechnicalDetails(finalized.items);
 }
 
-function exportResults() {
+function operatorHandling(item) {
+  const presentation = item.action && item.outcome === "recommendation"
+    ? ACTION_PRESENTATION[item.action]
+    : null;
+  return presentation
+    ? { handling: presentation.title, status: "Ready" }
+    : { handling: "Manual review required", status: "Needs review" };
+}
+
+function buildOperatorReport() {
   if (!finalizedResult) {
-    return;
+    return null;
   }
-  const payload = {
-    generated_at: new Date().toISOString(),
-    context: contextRequest(),
-    inventory: finalizedResult,
+  const items = finalizedResult.items.map(function (item) {
+    const handling = operatorHandling(item);
+    return {
+      item: humanize(item.label),
+      count: item.count,
+      handling: handling.handling,
+      status: handling.status,
+    };
+  });
+  return {
+    generatedAt: finalizedAt || new Date(),
+    context: [
+      ["Procedure stage", CONTEXT_LABELS.workflow[elements.workflowStage.value]],
+      ["Item usage", CONTEXT_LABELS.use[elements.useState.value]],
+      ["Contamination status", CONTEXT_LABELS.contamination[elements.contamination.value]],
+    ],
+    itemTypes: items.length,
+    totalItems: items.reduce(function (total, item) { return total + item.count; }, 0),
+    items: items,
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+}
+
+function csvCell(value) {
+  return '"' + String(value).replace(/"/g, '""') + '"';
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "surgical-intelligence-inventory.json";
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadOperatorReport() {
+  const report = buildOperatorReport();
+  if (!report) {
+    return;
+  }
+  const rows = [
+    ["Surgical Intelligence inventory report"],
+    ["Product status", "Prototype — not for clinical use"],
+    ["Generated", report.generatedAt.toLocaleString()],
+  ].concat(report.context, [
+    ["Item types", report.itemTypes],
+    ["Total items", report.totalItems],
+    [],
+    ["Item", "Count", "Recommended handling", "Status"],
+  ]);
+  report.items.forEach(function (item) {
+    rows.push([item.item, item.count, item.handling, item.status]);
+  });
+  const csv = rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
+  downloadBlob(
+    new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),
+    "surgical-intelligence-inventory-report.csv",
+  );
+}
+
+function exportTechnicalResults() {
+  if (!finalizedResult) {
+    return;
+  }
+  const payload = {
+    generated_at: (finalizedAt || new Date()).toISOString(),
+    context: contextRequest(),
+    inventory: finalizedResult,
+  };
+  downloadBlob(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    "surgical-intelligence-inventory-technical.json",
+  );
 }
 
 elements.camera.addEventListener("click", async function () {
@@ -1294,7 +1375,8 @@ elements.newScan.addEventListener("click", function () {
   setState("initial");
 });
 
-elements.exportResults.addEventListener("click", exportResults);
+elements.downloadReport.addEventListener("click", downloadOperatorReport);
+elements.exportTechnical.addEventListener("click", exportTechnicalResults);
 elements.toggleDetails.addEventListener("click", function () {
   const expanded = elements.toggleDetails.getAttribute("aria-expanded") === "true";
   elements.toggleDetails.setAttribute("aria-expanded", String(!expanded));

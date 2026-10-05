@@ -135,7 +135,32 @@ def test_results_are_mapped_to_human_readable_action_groups() -> None:
         assert label in source
 
     assert "renderTechnicalDetails(finalized.items)" in source
-    assert 'link.download = "surgical-intelligence-inventory.json"' in source
+    assert "Download report" in source
+    assert "Download technical JSON" in source
+
+
+def test_operator_report_excludes_technical_fields_and_preserves_review_status() -> None:
+    source = console_source()
+    report_builder = source.split("function buildOperatorReport()", 1)[1].split(
+        "function csvCell", 1
+    )[0]
+
+    assert 'handling: "Manual review required"' in source
+    assert 'status: "Needs review"' in source
+    assert '["Item", "Count", "Recommended handling", "Status"]' in source
+    assert '"surgical-intelligence-inventory-report.csv"' in source
+    assert '"surgical-intelligence-inventory-technical.json"' in source
+    assert "Print / save PDF" not in source
+    assert "function printOperatorReport()" not in source
+    for technical_field in (
+        "frame_count",
+        "class_id",
+        "confidence",
+        "outcome",
+        "matched_rule",
+        "missing_fields",
+    ):
+        assert technical_field not in report_builder
 
 
 def test_console_wires_session_lifecycle_through_signed_api_urls() -> None:
