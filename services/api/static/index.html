@@ -3,245 +3,629 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SURGINT</title>
+<title>Surgical Intelligence</title>
 <style>
   :root {
-    --background: #0e141d;
-    --panel: #161e2a;
-    --row: #1f2938;
-    --header: #263243;
-    --text: #f1f5f9;
-    --muted: #9daabc;
-    --track: #374457;
-    --active: #41adef;
-    --complete: #3dcd8c;
+    color-scheme: dark;
+    --background: #081523;
+    --surface: #0f2032;
+    --surface-raised: #15283d;
+    --border: #314a65;
+    --border-strong: #527293;
+    --text: #f7f9fc;
+    --muted: #aabbd0;
+    --primary: #28bced;
+    --success: #42d88d;
+    --warning: #ffb126;
+    --danger: #ff6672;
+    --review: #a477ff;
+    --shadow: 0 18px 50px rgb(0 0 0 / 0.25);
   }
 
   * { box-sizing: border-box; }
-
+  html, body { min-height: 100%; }
   body {
     margin: 0;
-    background: var(--background);
     color: var(--text);
-    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
-    height: 100vh;
+    background: radial-gradient(circle at 78% -20%, rgb(38 112 160 / 0.18), transparent 34rem), var(--background);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     overflow: hidden;
   }
-
-  main {
-    display: flex;
-    height: 100%;
+  button, select { font: inherit; }
+  button, select, input { color: inherit; }
+  button { border: 0; }
+  [hidden] { display: none !important; }
+  button:focus-visible, select:focus-visible {
+    outline: 3px solid rgb(40 188 237 / 0.55);
+    outline-offset: 3px;
   }
 
+  .app {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 620px;
+  }
+  .topbar {
+    min-height: 78px;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    margin: 0;
+    font-size: clamp(25px, 2.2vw, 36px);
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+  }
+  .badges { display: flex; align-items: center; gap: 9px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 7px 13px;
+    border: 1px solid currentColor;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .badge.prototype { color: #02141d; background: #39c8f3; border-color: #39c8f3; }
+  .badge.warning { color: #ffd9dc; background: #782c38; border-color: #bd4a58; }
+
+  .stepper {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 420px;
+    max-width: 760px;
+    margin-left: auto;
+  }
+  .step {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .step:not(:last-child)::after {
+    content: "";
+    height: 5px;
+    flex: 1;
+    margin-right: 12px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    transition: background 180ms ease, box-shadow 180ms ease;
+  }
+  .step-number {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: var(--surface-raised);
+  }
+  .step.active { color: var(--text); }
+  .step.active .step-number {
+    color: #04141d;
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 5px rgb(40 188 237 / 0.09);
+  }
+  .step.complete .step-number {
+    color: #052217;
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 0 5px rgb(66 216 141 / 0.1);
+  }
+  .step.complete:not(:last-child)::after {
+    background: var(--success);
+    box-shadow: 0 0 10px rgb(66 216 141 / 0.28);
+  }
+
+  .workspace {
+    width: 100%;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 64fr) minmax(360px, 36fr);
+    gap: 16px;
+    padding: 16px 20px 20px;
+  }
+  body[data-state="final"] .workspace { grid-template-columns: minmax(0, 56fr) minmax(520px, 44fr); }
+  .stage, .panel {
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgb(10 24 39 / 0.88);
+    box-shadow: var(--shadow);
+  }
   .stage {
-    flex: 1 1 50%;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #11161f;
-    position: relative;
-    min-width: 0;
+    overflow: hidden;
   }
+  canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; }
 
-  canvas {
-    max-width: 100%;
-    max-height: 100%;
-  }
-
-  .placeholder {
+  .empty-stage {
+    position: absolute;
+    inset: 20px;
+    display: grid;
+    place-items: center;
+    border: 2px dashed #395b7a;
+    border-radius: 12px;
     color: var(--muted);
-    font-size: 15px;
     text-align: center;
-    padding: 0 32px;
-    line-height: 1.7;
   }
-
-  .panel {
-    flex: 1 1 50%;
-    background: var(--panel);
-    padding: 34px 38px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    min-width: 0;
-    overflow: hidden;
+  .empty-content { max-width: 470px; padding: 30px; }
+  .tray-icon {
+    width: 122px;
+    height: 76px;
+    margin: 0 auto 26px;
+    position: relative;
+    border: 4px solid #6e8ca9;
+    border-radius: 18px 18px 25px 25px;
+    transform: perspective(100px) rotateX(8deg);
+    opacity: 0.85;
   }
-
-  h1 {
-    margin: 0;
-    font-size: 40px;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-  }
-
-  .bar {
-    height: 10px;
+  .tray-icon::before, .tray-icon::after {
+    content: "";
+    position: absolute;
+    background: #6e8ca9;
     border-radius: 5px;
-    background: var(--track);
-    overflow: hidden;
   }
+  .tray-icon::before { width: 5px; height: 40px; left: 35px; top: 15px; transform: rotate(12deg); }
+  .tray-icon::after { width: 42px; height: 5px; right: 20px; top: 34px; transform: rotate(-12deg); }
+  .empty-stage h2 { margin: 0 0 10px; color: var(--text); font-size: clamp(28px, 3vw, 42px); letter-spacing: -0.03em; }
+  .empty-stage p { margin: 0; font-size: 17px; line-height: 1.55; }
 
-  .bar > span {
-    display: block;
-    height: 100%;
-    width: 0;
-    border-radius: 5px;
-    background: var(--active);
-    transition: width 160ms linear;
-  }
-
-  .bar.complete > span { background: var(--complete); }
-
-  .status {
-    color: var(--muted);
-    font-size: 14px;
-    min-height: 20px;
-  }
-
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  .overlay-toggle, .scan-complete {
+    position: absolute;
+    left: 20px;
+    z-index: 2;
+    display: inline-flex;
     align-items: center;
+    min-height: 44px;
+    padding: 10px 15px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: rgb(8 21 35 / 0.9);
+    backdrop-filter: blur(10px);
+  }
+  .overlay-toggle { top: 20px; gap: 9px; cursor: pointer; }
+  .overlay-toggle::before { content: "◉"; color: var(--primary); }
+  .scan-complete { bottom: 20px; gap: 10px; }
+  .scan-complete::before {
+    content: "✓";
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #062317;
+    background: var(--success);
+    font-weight: 900;
   }
 
-  button, select, label.file {
-    font: inherit;
-    font-size: 14px;
-    color: var(--text);
-    background: var(--header);
-    border: 1px solid var(--track);
-    border-radius: 6px;
-    padding: 9px 16px;
+  .panel { padding: clamp(20px, 2.1vw, 32px); overflow: hidden; }
+  .view { width: 100%; min-width: 0; height: 100%; min-height: 0; display: flex; flex-direction: column; }
+  .view.scrollable { overflow-y: auto; padding-right: 4px; }
+  .view h2 { margin: 0; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; letter-spacing: -0.035em; }
+  .subtitle { margin: 10px 0 22px; color: var(--muted); font-size: 16px; line-height: 1.5; }
+
+  .source-actions { display: grid; gap: 12px; }
+  .button {
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-weight: 700;
+    text-align: center;
     cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
   }
+  .button:hover:not(:disabled) { transform: translateY(-1px); }
+  .button:disabled { cursor: not-allowed; opacity: 0.48; }
+  .button.primary { color: #041821; background: var(--primary); border-color: var(--primary); }
+  .button.primary:hover:not(:disabled) { background: #52cef3; }
+  .button.secondary { color: var(--text); background: var(--surface-raised); border-color: var(--border-strong); }
+  .button.quiet { min-height: 44px; color: var(--muted); background: transparent; border-color: var(--border); }
+  .button.danger:hover:not(:disabled) { color: #ffdce0; border-color: var(--danger); }
+  .button.small { min-height: 42px; padding: 9px 14px; font-size: 14px; }
 
-  button:hover:not(:disabled), label.file:hover { border-color: var(--muted); }
-  button:disabled { opacity: 0.45; cursor: default; }
-  input[type=file] { display: none; }
-
-  .context {
+  .helper-list { display: grid; gap: 9px; margin: 16px 2px 0; color: var(--muted); font-size: 14px; }
+  .helper-row { display: flex; align-items: center; gap: 9px; }
+  .helper-row::before { content: "•"; color: var(--primary); }
+  .checklist {
+    margin-top: auto;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .checklist h3 { margin: 0 0 12px; font-size: 18px; }
+  .checklist ul { padding: 0; margin: 0; list-style: none; }
+  .checklist li { display: flex; gap: 10px; padding: 10px 0; color: var(--muted); border-top: 1px solid var(--border); }
+  .checklist li::before { content: "✓"; color: var(--success); font-weight: 800; }
+  .guidance {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
+    padding: 13px 15px;
+    border: 1px solid #a56d12;
+    border-radius: 10px;
+    color: #f7e1b3;
+    background: rgb(126 78 0 / 0.14);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .guidance { margin: 14px 0; }
+  .guidance::before { content: "!"; color: var(--warning); font-weight: 900; }
+  .alert {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--danger);
+    border-radius: 9px;
+    color: #ffdadd;
+    background: rgb(138 31 45 / 0.22);
+    line-height: 1.4;
   }
 
-  .context select { padding: 7px 10px; }
+  .live-status { display: inline-flex; align-items: center; gap: 9px; margin: 10px 0 18px; color: var(--success); font-weight: 750; }
+  .live-status::before {
+    content: "";
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 6px rgb(66 216 141 / 0.1);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 10px rgb(66 216 141 / 0); } }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .metric { min-height: 112px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .metric-value { display: block; font-size: clamp(34px, 4vw, 48px); font-weight: 720; line-height: 1; }
+  .metric-label { display: block; margin-top: 7px; color: var(--muted); }
+  .detected-card { margin-top: 14px; padding: 17px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .detected-card h3 { margin: 0 0 10px; font-size: 18px; }
+  .detected-list { min-height: 44px; }
+  .detected-row { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .detected-empty { color: var(--muted); padding: 8px 0; }
+  .live-actions { display: grid; gap: 10px; margin-top: auto; }
 
-  table {
+  .review-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    background: var(--surface);
+  }
+  .review-summary strong { color: var(--text); }
+  .context-form { display: grid; gap: 16px; }
+  .field { display: grid; gap: 7px; }
+  .field label { color: #ccdaea; font-size: 14px; font-weight: 700; }
+  .field select {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 4px;
-    font-size: 17px;
+    min-height: 50px;
+    padding: 10px 42px 10px 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    background: var(--surface-raised);
+  }
+  .field select:invalid { border-color: var(--warning); }
+  .validation { display: flex; gap: 9px; color: var(--warning); font-size: 13px; }
+  .validation::before { content: "!"; font-weight: 900; }
+  .review-actions { display: grid; gap: 10px; margin-top: auto; padding-top: 20px; }
+
+  .result-header { margin-bottom: 14px; }
+  .result-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+  .result-summary { margin-top: 4px; color: var(--muted); }
+  .context-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+  .context-chip { padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 8px; color: #dbe8f5; background: var(--surface); font-size: 12px; }
+  .result-groups { display: grid; gap: 10px; }
+  .result-group {
+    --group-color: var(--primary);
+    overflow: hidden;
+    border: 1px solid var(--group-color);
+    border-radius: 11px;
+    background: var(--surface);
+  }
+  .result-group.review { --group-color: var(--warning); }
+  .result-group.secure { --group-color: var(--review); }
+  .result-group.reprocessing { --group-color: #43bdff; }
+  .result-group.sharps { --group-color: var(--danger); }
+  .result-group.waste { --group-color: var(--success); }
+  .group-title { display: flex; align-items: center; gap: 10px; padding: 11px 14px; color: var(--group-color); font-weight: 800; border-bottom: 1px solid var(--border); }
+  .group-icon { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 6px; color: #07131f; background: var(--group-color); font-size: 13px; }
+  .result-row { display: grid; grid-template-columns: minmax(120px, 1fr) 54px minmax(0, 1.4fr); gap: 12px; align-items: center; padding: 9px 14px; border-top: 1px solid rgb(255 255 255 / 0.07); }
+  .result-row:first-child { border-top: 0; }
+  .result-group:not(.review) .result-row { grid-template-columns: minmax(120px, 1fr) 54px; }
+  .result-group:not(.review) .result-note { display: none; }
+  .result-count { text-align: center; font-weight: 750; }
+  .result-note { color: var(--muted); font-size: 12px; }
+  .empty-result { padding: 24px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); text-align: center; background: var(--surface); }
+  .technical-details { margin-top: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .technical-details h3 { margin: 0 0 10px; font-size: 16px; }
+  .technical-item { padding: 10px 0; border-top: 1px solid var(--border); }
+  .technical-item:first-of-type { border-top: 0; }
+  .technical-item p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .technical-download { width: 100%; margin-top: 12px; }
+  .result-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
+  .result-actions .details-button { grid-column: 1 / -1; }
+
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
   }
 
-  th {
-    text-align: left;
-    font-weight: 400;
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    padding: 10px 14px;
-    background: var(--header);
+  @media (max-width: 1120px) {
+    .topbar { flex-wrap: wrap; gap: 12px; }
+    .stepper { order: 3; flex-basis: 100%; max-width: none; min-width: 0; }
+    .app { min-height: 720px; }
+    .workspace { grid-template-columns: minmax(0, 58fr) minmax(340px, 42fr); }
+    body[data-state="final"] .workspace { grid-template-columns: minmax(0, 48fr) minmax(500px, 52fr); }
   }
-
-  th:first-child { border-radius: 6px 0 0 6px; }
-  th:last-child { border-radius: 0 6px 6px 0; }
-
-  td {
-    padding: 9px 14px;
-    background: var(--row);
+  @media (max-width: 900px) {
+    body { overflow-x: hidden; overflow-y: auto; }
+    .app { height: auto; min-height: 100dvh; }
+    .topbar { padding: 14px 18px; }
+    .brand { white-space: normal; }
+    .badges { margin-left: auto; }
+    .badge { min-height: 30px; padding: 6px 9px; font-size: 10px; }
+    .step { font-size: 12px; }
+    .step-number { width: 30px; height: 30px; flex-basis: 30px; }
+    .workspace, body[data-state="final"] .workspace {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(280px, 48vh) auto;
+      padding: 12px;
+    }
+    .workspace > *, .empty-content, .source-actions { width: 100%; min-width: 0; max-width: 100%; }
+    .subtitle, .empty-stage p { overflow-wrap: anywhere; }
+    .panel { overflow: visible; }
+    .view { min-height: 520px; }
+    .view[data-view="review"] { min-height: 610px; }
+    .view[data-view="final"] { min-height: 0; }
   }
-
-  td:first-child {
-    border-left: 5px solid transparent;
-    border-radius: 6px 0 0 6px;
+  @media (max-width: 600px) {
+    .topbar { align-items: flex-start; }
+    .brand { flex-basis: 100%; font-size: 28px; }
+    .badges { margin-left: 0; }
+    .stepper { margin-top: 7px; }
+    .step { flex-direction: column; align-items: flex-start; gap: 5px; }
+    .step:not(:last-child)::after { position: absolute; top: 15px; left: 39px; right: 8px; margin: 0; }
+    .workspace, body[data-state="final"] .workspace { grid-template-rows: minmax(230px, 36vh) auto; }
+    .empty-stage { inset: 10px; }
+    .tray-icon { width: 90px; height: 58px; margin-bottom: 16px; }
+    .empty-stage h2 { font-size: 26px; }
+    .empty-stage p { font-size: 14px; }
+    .panel { padding: 20px 16px; }
+    .metrics { gap: 8px; }
+    .metric { min-height: 96px; padding: 14px; }
+    .result-heading-row { display: block; }
+    .context-chips { justify-content: flex-start; margin-top: 10px; }
+    .result-row { grid-template-columns: minmax(100px, 1fr) 42px; }
+    .result-note { grid-column: 1 / -1; }
+    .result-actions { grid-template-columns: 1fr; }
+    .result-actions .details-button { grid-column: auto; }
   }
-
-  td:last-child { border-radius: 0 6px 6px 0; }
-
-  .count { color: var(--muted); width: 18%; }
-  .action { width: 46%; }
-  .none { color: var(--muted); }
-
-  .results { overflow-y: auto; flex: 1; }
-
-  .detail td {
-    font-size: 13px;
-    color: var(--muted);
-    padding-top: 0;
-    padding-bottom: 11px;
-    border-radius: 0 0 6px 6px;
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
-
-  .detail td:first-child { border-radius: 0 0 0 6px; }
 </style>
 </head>
-<body>
-<main>
-  <div class="stage">
-    <canvas id="stage" width="16" height="9"></canvas>
-    <div class="placeholder" id="placeholder">
-      Start a camera session, or open a recorded session video.
+<body data-state="initial">
+<div class="app">
+  <header class="topbar">
+    <h1 class="brand">Surgical Intelligence</h1>
+    <div class="badges" aria-label="Product status">
+      <span class="badge prototype">PROTOTYPE</span>
+      <span class="badge warning">NOT FOR CLINICAL USE</span>
     </div>
-  </div>
+    <nav class="stepper" aria-label="Inventory workflow">
+      <div class="step active" data-step="capture" aria-current="step">
+        <span class="step-number">1</span><span>Capture</span>
+      </div>
+      <div class="step" data-step="review">
+        <span class="step-number">2</span><span>Review context</span>
+      </div>
+      <div class="step" data-step="finalize">
+        <span class="step-number">3</span><span>Finalize</span>
+      </div>
+    </nav>
+  </header>
 
-  <section class="panel">
-    <h1>INVENTORY</h1>
-    <div class="bar" id="bar"><span id="fill"></span></div>
+  <main class="workspace">
+    <section class="stage" aria-label="Instrument tray preview">
+      <canvas id="stage" width="16" height="9" hidden></canvas>
+      <div class="empty-stage" id="empty-stage">
+        <div class="empty-content">
+          <div class="tray-icon" aria-hidden="true"></div>
+          <h2>Ready to scan</h2>
+          <p>Start a camera session or open a recorded video.</p>
+        </div>
+      </div>
+      <button class="overlay-toggle" id="overlay-toggle" type="button" aria-pressed="true" hidden>
+        Overlays on
+      </button>
+      <div class="scan-complete" id="scan-complete" hidden>Scan complete</div>
+    </section>
 
-    <div class="controls">
-      <button id="camera">Start camera</button>
-      <label class="file" for="file">Open video</label>
-      <input type="file" id="file" accept="video/*">
-      <button id="finalize" disabled>Finalize</button>
-      <button id="stop" disabled>Stop</button>
-    </div>
+    <aside class="panel" aria-label="Session controls and inventory results">
+      <div class="alert" id="alert" role="alert" hidden></div>
 
-    <div class="context">
-      <select id="stage-select" title="workflow stage">
-        <option value="post-procedure-clearing">post-procedure-clearing</option>
-        <option value="in-procedure">in-procedure</option>
-        <option value="pre-procedure-setup">pre-procedure-setup</option>
-      </select>
-      <select id="use-state" title="use state">
-        <option value="unused">unused</option>
-        <option value="used">used</option>
-        <option value="">use state unset</option>
-      </select>
-      <select id="contamination" title="contamination state">
-        <option value="not-regulated">not-regulated</option>
-        <option value="potentially-infectious">potentially-infectious</option>
-        <option value="chemical">chemical</option>
-        <option value="cytotoxic">cytotoxic</option>
-        <option value="radioactive">radioactive</option>
-        <option value="">contamination unset</option>
-      </select>
-    </div>
+      <section class="view" data-view="initial">
+        <h2 tabindex="-1">Start a new scan</h2>
+        <p class="subtitle">Choose how you want to capture the instrument tray.</p>
+        <div class="source-actions">
+          <button class="button primary" id="camera" type="button">Start live camera</button>
+          <button class="button secondary" id="open-video" type="button">Open recorded video</button>
+          <label class="visually-hidden" for="file">Choose a recorded instrument tray video</label>
+          <input class="visually-hidden" type="file" id="file" accept="video/mp4,video/quicktime,video/webm,video/*">
+        </div>
+        <div class="helper-list" aria-label="Source requirements">
+          <div class="helper-row">Camera access required</div>
+          <div class="helper-row">MP4, MOV or WebM</div>
+        </div>
+        <div class="checklist">
+          <h3>Before you begin</h3>
+          <ul>
+            <li>Place the full tray in view</li>
+            <li>Use bright, even lighting</li>
+            <li>Move slowly across the tray</li>
+          </ul>
+        </div>
+      </section>
 
-    <div class="status" id="status"></div>
-    <div class="results" id="results"></div>
-  </section>
-</main>
+      <section class="view" data-view="live" hidden>
+        <h2 tabindex="-1">Live scan</h2>
+        <div class="live-status" role="status">Scanning</div>
+        <div class="metrics" aria-label="Live scan summary">
+          <div class="metric">
+            <strong class="metric-value" id="object-count">0</strong>
+            <span class="metric-label">objects in view</span>
+          </div>
+          <div class="metric">
+            <strong class="metric-value" id="elapsed">00:00</strong>
+            <span class="metric-label">elapsed</span>
+          </div>
+        </div>
+        <div class="detected-card">
+          <h3>Detected now</h3>
+          <div class="detected-list" id="detected-list">
+            <div class="detected-empty">Waiting for the first detection…</div>
+          </div>
+        </div>
+        <div class="guidance">Move slowly across the full tray for a more complete inventory.</div>
+        <div class="live-actions">
+          <button class="button primary" id="finish-capture" type="button" disabled>Finish scan</button>
+          <button class="button quiet danger" id="discard" type="button">Discard session</button>
+        </div>
+      </section>
+
+      <section class="view" data-view="review" hidden>
+        <h2 tabindex="-1">Review handling context</h2>
+        <p class="subtitle">Confirm these details before generating recommendations.</p>
+        <div class="review-summary">
+          <span>Scan complete</span>
+          <strong id="review-item-types">0 item types detected</strong>
+        </div>
+        <form class="context-form" id="context-form">
+          <div class="field">
+            <label for="workflow-stage">Procedure stage</label>
+            <select id="workflow-stage" name="workflow_stage" required>
+              <option value="post-procedure-clearing">Post-procedure — clearing the tray</option>
+              <option value="in-procedure">Intra-procedure — active instrument use</option>
+              <option value="pre-procedure-setup">Pre-procedure — setting up the tray</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="use-state">Item usage</label>
+            <select id="use-state" name="use_state" required>
+              <option value="used">Used</option>
+              <option value="unused">Unused</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="contamination">Contamination status</label>
+            <select id="contamination" name="contamination_state" required>
+              <option value="" selected>Select status</option>
+              <option value="not-regulated">No regulated contamination</option>
+              <option value="potentially-infectious">Potentially infectious</option>
+            </select>
+            <span class="validation" id="context-validation">Choose a contamination status to continue.</span>
+          </div>
+          <div class="review-actions">
+            <button class="button primary" id="generate" type="submit" disabled>Generate inventory</button>
+            <button class="button quiet" id="back-to-scan" type="button">Back to scan</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="view scrollable" data-view="final" hidden>
+        <div class="result-header">
+          <div class="result-heading-row">
+            <div>
+              <h2 tabindex="-1">Inventory ready</h2>
+              <div class="result-summary" id="result-summary"></div>
+            </div>
+            <div class="context-chips" id="context-chips" aria-label="Handling context"></div>
+          </div>
+        </div>
+        <div class="result-groups" id="result-groups"></div>
+        <div class="technical-details" id="technical-details" hidden>
+          <div id="technical-content"></div>
+          <button class="button secondary small technical-download" id="export-technical" type="button">
+            Download technical JSON
+          </button>
+        </div>
+        <div class="result-actions">
+          <button class="button primary small" id="new-scan" type="button">Start new scan</button>
+          <button class="button secondary small" id="download-report" type="button">Download report</button>
+          <button class="button quiet small details-button" id="toggle-details" type="button" aria-expanded="false">
+            View technical details
+          </button>
+        </div>
+      </section>
+    </aside>
+  </main>
+</div>
 
 <script>
-// the palette the rendered demo uses, so a browser session and a rendered
-// session read the same way
 const CLASS_COLORS = [
   "#00bcd4", "#ffc107", "#ef5350", "#66bb6a", "#ab47bc", "#ff7043", "#42a5f5",
   "#d4e157", "#26c6da", "#ffa726", "#7e57c2", "#7cb342", "#ec407a",
 ];
 
-const ACTION_COLORS = {
-  "secure-transport-to-reprocessing": "#a674ff",
-  "transport-to-reprocessing": "#3aa6ff",
-  "approved-sharps-stream": "#ff5c5c",
-  "facility-general-waste": "#3dcd8c",
+const INFERENCE_FRAME_STRIDE = 5;
+
+const ACTION_PRESENTATION = {
+  "secure-transport-to-reprocessing": { key: "secure", title: "Secure for reprocessing", icon: "S" },
+  "transport-to-reprocessing": { key: "reprocessing", title: "Send for reprocessing", icon: "R" },
+  "approved-sharps-stream": { key: "sharps", title: "Sharps disposal", icon: "#" },
+  "facility-general-waste": { key: "waste", title: "General waste", icon: "W" },
 };
 
-// Infer on one frame out of every five. Playback still runs at the video's
-// native frame rate, and busy inference drops frames instead of delaying it.
-const INFERENCE_FRAME_STRIDE = 5;
+const CONTEXT_LABELS = {
+  workflow: {
+    "post-procedure-clearing": "Post-procedure — clearing the tray",
+    "in-procedure": "Intra-procedure — active instrument use",
+    "pre-procedure-setup": "Pre-procedure — setting up the tray",
+  },
+  use: { used: "Used", unused: "Unused" },
+  contamination: {
+    "not-regulated": "No regulated contamination",
+    "potentially-infectious": "Potentially infectious",
+  },
+};
 
 const canvas = document.getElementById("stage");
 const context = canvas.getContext("2d");
@@ -249,30 +633,56 @@ const capture = document.createElement("canvas");
 const captureContext = capture.getContext("2d");
 
 const elements = {
-  placeholder: document.getElementById("placeholder"),
-  bar: document.getElementById("bar"),
-  fill: document.getElementById("fill"),
-  status: document.getElementById("status"),
-  results: document.getElementById("results"),
+  emptyStage: document.getElementById("empty-stage"),
+  overlayToggle: document.getElementById("overlay-toggle"),
+  scanComplete: document.getElementById("scan-complete"),
+  alert: document.getElementById("alert"),
+  views: Array.from(document.querySelectorAll("[data-view]")),
+  steps: Array.from(document.querySelectorAll("[data-step]")),
   camera: document.getElementById("camera"),
+  openVideo: document.getElementById("open-video"),
   file: document.getElementById("file"),
-  finalize: document.getElementById("finalize"),
-  stop: document.getElementById("stop"),
-  workflowStage: document.getElementById("stage-select"),
+  objectCount: document.getElementById("object-count"),
+  elapsed: document.getElementById("elapsed"),
+  detectedList: document.getElementById("detected-list"),
+  finishCapture: document.getElementById("finish-capture"),
+  discard: document.getElementById("discard"),
+  reviewItemTypes: document.getElementById("review-item-types"),
+  contextForm: document.getElementById("context-form"),
+  workflowStage: document.getElementById("workflow-stage"),
   useState: document.getElementById("use-state"),
   contamination: document.getElementById("contamination"),
+  contextValidation: document.getElementById("context-validation"),
+  generate: document.getElementById("generate"),
+  backToScan: document.getElementById("back-to-scan"),
+  resultSummary: document.getElementById("result-summary"),
+  contextChips: document.getElementById("context-chips"),
+  resultGroups: document.getElementById("result-groups"),
+  technicalDetails: document.getElementById("technical-details"),
+  technicalContent: document.getElementById("technical-content"),
+  newScan: document.getElementById("new-scan"),
+  downloadReport: document.getElementById("download-report"),
+  exportTechnical: document.getElementById("export-technical"),
+  toggleDetails: document.getElementById("toggle-details"),
 };
 
+let uiState = "initial";
 let session = null;
 let source = null;
 let sourceUrl = null;
 let stream = null;
 let running = false;
 let frames = 0;
+let mediaKind = null;
 let videoFrameCallback = null;
+let sessionStartedAt = null;
+let elapsedTimer = null;
+let latestDetections = [];
+let seenClasses = new Map();
+let overlaysEnabled = true;
+let finalizedResult = null;
+let finalizedAt = null;
 
-// Private HF Spaces authorize the iframe through this short-lived signature.
-// Local and public deployments have no signature, so their URLs stay unchanged.
 const hfSign = new URLSearchParams(window.location.search).get("__sign");
 
 function apiUrl(path) {
@@ -283,25 +693,108 @@ function apiUrl(path) {
   return url.toString();
 }
 
-function status(message) {
-  elements.status.textContent = message;
+function setState(nextState, moveFocus) {
+  uiState = nextState;
+  document.body.dataset.state = nextState;
+  elements.views.forEach(function (view) { view.hidden = view.dataset.view !== nextState; });
+
+  const activeStep = nextState === "review" ? "review" : nextState === "final" ? "finalize" : "capture";
+  const order = ["capture", "review", "finalize"];
+  const activeIndex = order.indexOf(activeStep);
+  elements.steps.forEach(function (step) {
+    const index = order.indexOf(step.dataset.step);
+    step.classList.toggle("active", index === activeIndex);
+    step.classList.toggle("complete", index < activeIndex);
+    if (index === activeIndex) {
+      step.setAttribute("aria-current", "step");
+    } else {
+      step.removeAttribute("aria-current");
+    }
+  });
+
+  const hasPreview = nextState !== "initial";
+  canvas.hidden = !hasPreview;
+  elements.emptyStage.hidden = hasPreview;
+  elements.overlayToggle.hidden = nextState !== "live";
+  elements.scanComplete.hidden = nextState !== "review";
+  clearAlert();
+
+  if (moveFocus !== false) {
+    const heading = document.querySelector('[data-view="' + nextState + '"] h2');
+    if (heading) {
+      heading.focus({ preventScroll: true });
+    }
+  }
 }
 
-function progress(fraction, complete) {
-  elements.fill.style.width = `${Math.min(1, Math.max(0, fraction)) * 100}%`;
-  elements.bar.classList.toggle("complete", Boolean(complete));
+function showAlert(message) {
+  elements.alert.textContent = message;
+  elements.alert.hidden = false;
+}
+
+function clearAlert() {
+  elements.alert.textContent = "";
+  elements.alert.hidden = true;
+}
+
+function setInitialBusy(busy) {
+  elements.camera.disabled = busy;
+  elements.openVideo.disabled = busy;
+  elements.file.disabled = busy;
+}
+
+function formatElapsed(seconds) {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const remainder = wholeSeconds % 60;
+  return String(minutes).padStart(2, "0") + ":" + String(remainder).padStart(2, "0");
+}
+
+function updateElapsed() {
+  if (uiState !== "live") {
+    return;
+  }
+  const seconds = mediaKind === "video" && source
+    ? source.currentTime
+    : (Date.now() - sessionStartedAt) / 1000;
+  elements.elapsed.textContent = formatElapsed(seconds);
+}
+
+function startElapsedTimer() {
+  stopElapsedTimer();
+  sessionStartedAt = Date.now();
+  updateElapsed();
+  elapsedTimer = window.setInterval(updateElapsed, 500);
+}
+
+function stopElapsedTimer() {
+  if (elapsedTimer !== null) {
+    window.clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  }
 }
 
 async function createSession() {
   const response = await fetch(apiUrl("/v1/sessions"), { method: "POST" });
   if (!response.ok) {
-    throw new Error(
-      response.status === 429
-        ? "every session slot is in use; stop one and try again"
-        : `could not start a session (${response.status})`,
-    );
+    throw new Error(response.status === 429
+      ? "Every session slot is in use. Stop another session and try again."
+      : "The scanner could not start (" + response.status + ").");
   }
   return (await response.json()).session_id;
+}
+
+async function deleteSession() {
+  if (!session) {
+    return;
+  }
+  const sessionToDelete = session;
+  session = null;
+  try {
+    await fetch(apiUrl("/v1/sessions/" + sessionToDelete), { method: "DELETE" });
+  } catch (_error) {
+    // Local state is already cleared; server expiry remains the fallback.
+  }
 }
 
 async function postFrame(video) {
@@ -310,17 +803,18 @@ async function postFrame(video) {
     capture.height = video.videoHeight;
   }
   captureContext.drawImage(video, 0, 0);
-
-  const blob = await new Promise((resolve) => capture.toBlob(resolve, "image/jpeg", 0.9));
+  const blob = await new Promise(function (resolve) { capture.toBlob(resolve, "image/jpeg", 0.9); });
+  if (!blob) {
+    throw new Error("The current video frame could not be captured.");
+  }
   const body = new FormData();
   body.append("image", blob, "frame.jpg");
-
-  const response = await fetch(apiUrl(`/v1/sessions/${session}/frames`), {
+  const response = await fetch(apiUrl("/v1/sessions/" + session + "/frames"), {
     method: "POST",
-    body,
+    body: body,
   });
   if (!response.ok) {
-    throw new Error(`frame rejected (${response.status})`);
+    throw new Error("The scanner rejected a video frame (" + response.status + ").");
   }
   return response.json();
 }
@@ -331,154 +825,97 @@ function draw(video, detections) {
     canvas.height = video.videoHeight;
   }
   context.drawImage(video, 0, 0);
-
+  if (!overlaysEnabled) {
+    return;
+  }
   const scale = canvas.width / 900;
   context.lineWidth = Math.max(2, Math.round(3 * scale));
-  context.font = `${Math.max(13, Math.round(20 * scale))}px system-ui, sans-serif`;
+  context.font = "600 " + Math.max(13, Math.round(18 * scale)) + "px system-ui, sans-serif";
   context.textBaseline = "top";
-
-  for (const detection of detections) {
-    const [left, top, right, bottom] = detection.box;
+  detections.forEach(function (detection) {
+    const left = detection.box[0];
+    const top = detection.box[1];
+    const right = detection.box[2];
+    const bottom = detection.box[3];
     const color = CLASS_COLORS[detection.class_id % CLASS_COLORS.length];
-
     context.strokeStyle = color;
     context.strokeRect(left, top, right - left, bottom - top);
 
     const padding = Math.round(5 * scale);
-    const label = `${detection.label} #${detection.track_id}`;
+    const label = humanize(detection.label);
     const metrics = context.measureText(label);
-    const height = Math.max(18, Math.round(26 * scale));
+    const height = Math.max(20, Math.round(25 * scale));
+    const chipWidth = metrics.width + padding * 2;
+    const chipLeft = Math.min(Math.max(0, left), Math.max(0, canvas.width - chipWidth));
     const chipTop = Math.max(0, top - height);
-
     context.fillStyle = color;
-    context.fillRect(left, chipTop, metrics.width + padding * 2, height);
-    context.fillStyle = "#11161f";
-    context.fillText(label, left + padding, chipTop + padding / 2);
+    context.fillRect(chipLeft, chipTop, chipWidth, height);
+    context.fillStyle = "#07131f";
+    context.fillText(label, chipLeft + padding, chipTop + padding / 2);
+  });
+}
+
+function humanize(value) {
+  return String(value)
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+}
+
+function updateDetections(detections) {
+  latestDetections = detections;
+  elements.objectCount.textContent = String(detections.length);
+  const current = new Map();
+  detections.forEach(function (detection) {
+    seenClasses.set(detection.class_id, detection.label);
+    current.set(detection.label, (current.get(detection.label) || 0) + 1);
+  });
+  elements.detectedList.replaceChildren();
+  if (!current.size) {
+    const empty = document.createElement("div");
+    empty.className = "detected-empty";
+    empty.textContent = "No objects in the current view";
+    elements.detectedList.append(empty);
+    return;
   }
+  Array.from(current.entries()).slice(0, 5).forEach(function (entry) {
+    const row = document.createElement("div");
+    row.className = "detected-row";
+    const label = document.createElement("span");
+    label.textContent = humanize(entry[0]);
+    const count = document.createElement("strong");
+    count.textContent = String(entry[1]);
+    row.append(label, count);
+    elements.detectedList.append(row);
+  });
 }
 
-async function runVideo(video) {
-  elements.finalize.disabled = true;
-  let latestDetections = [];
-  let presentedFrames = 0;
-  let lastInferenceFrame = 1 - INFERENCE_FRAME_STRIDE;
-  let inferenceInFlight = false;
-  let playbackEnded = false;
-  let completed = false;
-
-  const finish = () => {
-    if (!running || !playbackEnded || inferenceInFlight || completed) {
-      return;
-    }
-    completed = true;
-    progress(1, false);
-    elements.finalize.disabled = false;
-    status("");
-  };
-
-  const infer = async () => {
-    inferenceInFlight = true;
-    try {
-      const result = await postFrame(video);
-      frames = result.frame_count;
-      latestDetections = result.detections;
-      status(
-        `video frame ${presentedFrames} · ${frames} sampled frames processed · `
-        + `${latestDetections.length} tracked`,
-      );
-    } catch (error) {
-      status(error.message);
-      running = false;
-      video.pause();
-    } finally {
-      inferenceInFlight = false;
-      finish();
-    }
-  };
-
-  const showFrame = (_now, metadata) => {
-    if (!running) {
-      videoFrameCallback = null;
-      return;
-    }
-
-    presentedFrames = metadata.presentedFrames;
-    draw(video, latestDetections);
-    if (Number.isFinite(video.duration) && video.duration > 0) {
-      progress(video.currentTime / video.duration, false);
-    }
-
-    if (
-      !inferenceInFlight
-      && presentedFrames - lastInferenceFrame >= INFERENCE_FRAME_STRIDE
-    ) {
-      lastInferenceFrame = presentedFrames;
-      void infer();
-    }
-
-    videoFrameCallback = video.requestVideoFrameCallback(showFrame);
-  };
-
-  video.addEventListener("ended", () => {
-    playbackEnded = true;
-    if (videoFrameCallback !== null) {
-      video.cancelVideoFrameCallback(videoFrameCallback);
-      videoFrameCallback = null;
-    }
-    finish();
-  }, { once: true });
-
-  status(`playing at source frame rate · inferring every ${INFERENCE_FRAME_STRIDE} frames`);
-  videoFrameCallback = video.requestVideoFrameCallback(showFrame);
-  await video.play();
-}
-
-async function runCamera(video) {
-  while (running) {
-    const result = await postFrame(video);
-    frames = result.frame_count;
-    draw(video, result.detections);
-    progress(0.5 + Math.sin(frames / 4) * 0.5);
-    status(`frame ${frames}  ·  ${result.detections.length} tracked`);
-  }
-}
-
-async function start(video, run) {
-  elements.placeholder.style.display = "none";
-  elements.camera.disabled = true;
-  elements.file.disabled = true;
-  elements.finalize.disabled = false;
-  elements.stop.disabled = false;
-  elements.results.innerHTML = "";
-  progress(0, false);
+function resetSessionData() {
   frames = 0;
-
-  try {
-    session = await createSession();
-    running = true;
-    await run(video);
-  } catch (error) {
-    status(error.message);
-    release();
-    if (session) {
-      await fetch(apiUrl(`/v1/sessions/${session}`), { method: "DELETE" });
-      session = null;
-    }
-    elements.camera.disabled = false;
-    elements.file.disabled = false;
-    elements.finalize.disabled = true;
-    elements.stop.disabled = true;
-  }
+  latestDetections = [];
+  seenClasses = new Map();
+  finalizedResult = null;
+  finalizedAt = null;
+  elements.objectCount.textContent = "0";
+  elements.elapsed.textContent = "00:00";
+  elements.finishCapture.disabled = true;
+  elements.file.value = "";
+  elements.technicalDetails.hidden = true;
+  elements.toggleDetails.setAttribute("aria-expanded", "false");
+  elements.toggleDetails.textContent = "View technical details";
+  elements.contextForm.reset();
+  updateContextValidity();
 }
 
-function release() {
+function releaseMedia() {
   running = false;
-  if (source && videoFrameCallback !== null) {
+  stopElapsedTimer();
+  if (source && videoFrameCallback !== null && source.cancelVideoFrameCallback) {
     source.cancelVideoFrameCallback(videoFrameCallback);
-    videoFrameCallback = null;
   }
+  videoFrameCallback = null;
   if (source) {
     source.pause();
+    source.srcObject = null;
     source = null;
   }
   if (sourceUrl) {
@@ -486,149 +923,476 @@ function release() {
     sourceUrl = null;
   }
   if (stream) {
-    stream.getTracks().forEach((track) => track.stop());
+    stream.getTracks().forEach(function (track) { track.stop(); });
     stream = null;
   }
 }
 
-elements.camera.addEventListener("click", async () => {
+async function failCapture(error) {
+  releaseMedia();
+  await deleteSession();
+  setInitialBusy(false);
+  setState("initial");
+  showAlert(error && error.message ? error.message : "The scan could not continue.");
+}
+
+async function startCapture(video, runner, kind) {
+  resetSessionData();
+  mediaKind = kind;
+  source = video;
+  setInitialBusy(true);
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+    session = await createSession();
+    running = true;
+    setState("live");
+    startElapsedTimer();
+    await runner(video);
   } catch (error) {
-    status("no camera available in this browser");
+    await failCapture(error);
+  }
+}
+
+async function runCamera(video) {
+  while (running) {
+    const result = await postFrame(video);
+    frames = result.frame_count;
+    updateDetections(result.detections);
+    draw(video, result.detections);
+    elements.finishCapture.disabled = false;
+  }
+}
+
+async function runVideo(video) {
+  let presentedFrames = 0;
+  let lastInferenceFrame = 1 - INFERENCE_FRAME_STRIDE;
+  let inferenceInFlight = false;
+  let playbackEnded = false;
+  let completed = false;
+
+  const finishWhenReady = function () {
+    if (!running || !playbackEnded || inferenceInFlight || completed) {
+      return;
+    }
+    completed = true;
+    finishCapture();
+  };
+
+  const infer = async function () {
+    inferenceInFlight = true;
+    try {
+      const result = await postFrame(video);
+      frames = result.frame_count;
+      updateDetections(result.detections);
+      elements.finishCapture.disabled = false;
+    } catch (error) {
+      await failCapture(error);
+    } finally {
+      inferenceInFlight = false;
+      finishWhenReady();
+    }
+  };
+
+  const showFrame = function (_now, metadata) {
+    if (!running) {
+      videoFrameCallback = null;
+      return;
+    }
+    presentedFrames = metadata.presentedFrames;
+    draw(video, latestDetections);
+    updateElapsed();
+    if (!inferenceInFlight && presentedFrames - lastInferenceFrame >= INFERENCE_FRAME_STRIDE) {
+      lastInferenceFrame = presentedFrames;
+      void infer();
+    }
+    videoFrameCallback = video.requestVideoFrameCallback(showFrame);
+  };
+
+  video.addEventListener("ended", function () {
+    playbackEnded = true;
+    if (videoFrameCallback !== null) {
+      video.cancelVideoFrameCallback(videoFrameCallback);
+      videoFrameCallback = null;
+    }
+    finishWhenReady();
+  }, { once: true });
+
+  if (!video.requestVideoFrameCallback) {
+    throw new Error("This browser does not support recorded-video scanning. Try a current browser.");
+  }
+  videoFrameCallback = video.requestVideoFrameCallback(showFrame);
+  await video.play();
+}
+
+function finishCapture() {
+  if (uiState !== "live" || frames < 1) {
+    if (uiState === "live") {
+      showAlert("Keep the tray in view until the first scan result is ready.");
+    }
+    return;
+  }
+  releaseMedia();
+  const typeCount = seenClasses.size;
+  elements.reviewItemTypes.textContent = typeCount + " item type" + (typeCount === 1 ? "" : "s") + " detected";
+  updateContextValidity();
+  setState("review");
+}
+
+async function discardCurrentSession(askForConfirmation) {
+  if (askForConfirmation && !window.confirm("Discard this scan and its inventory data?")) {
+    return;
+  }
+  releaseMedia();
+  await deleteSession();
+  resetSessionData();
+  setInitialBusy(false);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  setState("initial");
+}
+
+function updateContextValidity() {
+  const valid = elements.contextForm.checkValidity();
+  elements.generate.disabled = !valid;
+  elements.contextValidation.hidden = Boolean(elements.contamination.value);
+}
+
+function contextRequest() {
+  return {
+    workflow_stage: elements.workflowStage.value,
+    use_state: elements.useState.value,
+    contamination_state: elements.contamination.value,
+  };
+}
+
+async function finalizeSession() {
+  if (!session || !elements.contextForm.checkValidity()) {
+    updateContextValidity();
+    return;
+  }
+  elements.generate.disabled = true;
+  elements.generate.textContent = "Generating inventory…";
+  clearAlert();
+  try {
+    const response = await fetch(apiUrl("/v1/sessions/" + session + "/finalize"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contextRequest()),
+    });
+    if (!response.ok) {
+      let detail = "The inventory could not be finalized (" + response.status + ").";
+      try {
+        const payload = await response.json();
+        if (payload.detail) {
+          detail = payload.detail;
+        }
+      } catch (_error) {
+        // Keep the status-based message when the response is not JSON.
+      }
+      throw new Error(detail);
+    }
+    finalizedResult = await response.json();
+    finalizedAt = new Date();
+    renderResults(finalizedResult);
+    await deleteSession();
+    setState("final");
+  } catch (error) {
+    showAlert(error.message);
+    updateContextValidity();
+  } finally {
+    elements.generate.textContent = "Generate inventory";
+  }
+}
+
+function createChip(text) {
+  const chip = document.createElement("span");
+  chip.className = "context-chip";
+  chip.textContent = text;
+  return chip;
+}
+
+function reviewMessage(item) {
+  if (item.outcome === "low_confidence") {
+    return "Low-confidence detection — confirm manually";
+  }
+  if (item.missing_fields && item.missing_fields.length) {
+    return "Additional handling information is required";
+  }
+  return "Handling action could not be determined";
+}
+
+function createResultGroup(presentation, items) {
+  const group = document.createElement("section");
+  group.className = "result-group " + presentation.key;
+  const title = document.createElement("div");
+  title.className = "group-title";
+  const icon = document.createElement("span");
+  icon.className = "group-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = presentation.icon;
+  const text = document.createElement("span");
+  text.textContent = presentation.title;
+  title.append(icon, text);
+  group.append(title);
+
+  items.forEach(function (item) {
+    const row = document.createElement("div");
+    row.className = "result-row";
+    const label = document.createElement("span");
+    label.textContent = humanize(item.label);
+    const count = document.createElement("span");
+    count.className = "result-count";
+    count.textContent = String(item.count);
+    const note = document.createElement("span");
+    note.className = "result-note";
+    note.textContent = presentation.key === "review" ? reviewMessage(item) : "";
+    row.append(label, count, note);
+    group.append(row);
+  });
+  return group;
+}
+
+function renderTechnicalDetails(items) {
+  elements.technicalContent.replaceChildren();
+  const heading = document.createElement("h3");
+  heading.textContent = "Technical details";
+  elements.technicalContent.append(heading);
+  items.forEach(function (item) {
+    const block = document.createElement("div");
+    block.className = "technical-item";
+    const label = document.createElement("strong");
+    label.textContent = humanize(item.label) + " · " + Math.round(item.confidence * 100) + "% confidence";
+    const reason = document.createElement("p");
+    reason.textContent = item.reason || "No policy explanation was returned.";
+    block.append(label, reason);
+    elements.technicalContent.append(block);
+  });
+}
+
+function renderResults(finalized) {
+  const totalItems = finalized.items.reduce(function (total, item) { return total + item.count; }, 0);
+  elements.resultSummary.textContent = finalized.items.length + " item type" +
+    (finalized.items.length === 1 ? "" : "s") + " · " + totalItems + " item" +
+    (totalItems === 1 ? "" : "s");
+  elements.contextChips.replaceChildren(
+    createChip(CONTEXT_LABELS.workflow[elements.workflowStage.value]),
+    createChip(CONTEXT_LABELS.use[elements.useState.value]),
+    createChip(CONTEXT_LABELS.contamination[elements.contamination.value]),
+  );
+  elements.resultGroups.replaceChildren();
+  if (!finalized.items.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-result";
+    empty.textContent = "No items were tracked long enough to include in the inventory.";
+    elements.resultGroups.append(empty);
+    renderTechnicalDetails([]);
     return;
   }
 
-  const video = document.createElement("video");
-  video.srcObject = stream;
-  video.muted = true;
-  await video.play();
-  source = video;
-  await start(video, runCamera);
+  const grouped = new Map();
+  finalized.items.forEach(function (item) {
+    const key = item.action && item.outcome === "recommendation" ? item.action : "review";
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(item);
+  });
+  if (grouped.has("review")) {
+    elements.resultGroups.append(createResultGroup(
+      { key: "review", title: "Needs review", icon: "!" }, grouped.get("review"),
+    ));
+  }
+  Object.keys(ACTION_PRESENTATION).forEach(function (action) {
+    if (grouped.has(action)) {
+      elements.resultGroups.append(createResultGroup(ACTION_PRESENTATION[action], grouped.get(action)));
+    }
+  });
+  Array.from(grouped.keys()).forEach(function (action) {
+    if (action !== "review" && !ACTION_PRESENTATION[action]) {
+      elements.resultGroups.append(createResultGroup(
+        { key: "review", title: "Needs review", icon: "!" }, grouped.get(action),
+      ));
+    }
+  });
+  renderTechnicalDetails(finalized.items);
+}
+
+function operatorHandling(item) {
+  const presentation = item.action && item.outcome === "recommendation"
+    ? ACTION_PRESENTATION[item.action]
+    : null;
+  return presentation
+    ? { handling: presentation.title, status: "Ready" }
+    : { handling: "Manual review required", status: "Needs review" };
+}
+
+function buildOperatorReport() {
+  if (!finalizedResult) {
+    return null;
+  }
+  const items = finalizedResult.items.map(function (item) {
+    const handling = operatorHandling(item);
+    return {
+      item: humanize(item.label),
+      count: item.count,
+      handling: handling.handling,
+      status: handling.status,
+    };
+  });
+  return {
+    generatedAt: finalizedAt || new Date(),
+    context: [
+      ["Procedure stage", CONTEXT_LABELS.workflow[elements.workflowStage.value]],
+      ["Item usage", CONTEXT_LABELS.use[elements.useState.value]],
+      ["Contamination status", CONTEXT_LABELS.contamination[elements.contamination.value]],
+    ],
+    itemTypes: items.length,
+    totalItems: items.reduce(function (total, item) { return total + item.count; }, 0),
+    items: items,
+  };
+}
+
+function csvCell(value) {
+  return '"' + String(value).replace(/"/g, '""') + '"';
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadOperatorReport() {
+  const report = buildOperatorReport();
+  if (!report) {
+    return;
+  }
+  const rows = [
+    ["Surgical Intelligence inventory report"],
+    ["Product status", "Prototype — not for clinical use"],
+    ["Generated", report.generatedAt.toLocaleString()],
+  ].concat(report.context, [
+    ["Item types", report.itemTypes],
+    ["Total items", report.totalItems],
+    [],
+    ["Item", "Count", "Recommended handling", "Status"],
+  ]);
+  report.items.forEach(function (item) {
+    rows.push([item.item, item.count, item.handling, item.status]);
+  });
+  const csv = rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
+  downloadBlob(
+    new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),
+    "surgical-intelligence-inventory-report.csv",
+  );
+}
+
+function exportTechnicalResults() {
+  if (!finalizedResult) {
+    return;
+  }
+  const payload = {
+    generated_at: (finalizedAt || new Date()).toISOString(),
+    context: contextRequest(),
+    inventory: finalizedResult,
+  };
+  downloadBlob(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    "surgical-intelligence-inventory-technical.json",
+  );
+}
+
+elements.camera.addEventListener("click", async function () {
+  setInitialBusy(true);
+  clearAlert();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: "environment" } },
+    });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+    await video.play();
+    await startCapture(video, runCamera, "camera");
+  } catch (_error) {
+    await failCapture(new Error("Camera access was unavailable. Check browser permissions and try again."));
+  }
 });
 
-elements.file.addEventListener("change", async (event) => {
+elements.openVideo.addEventListener("click", function () { elements.file.click(); });
+
+elements.file.addEventListener("change", async function (event) {
   const file = event.target.files[0];
   if (!file) {
     return;
   }
-
-  const video = document.createElement("video");
-  sourceUrl = URL.createObjectURL(file);
-  video.src = sourceUrl;
-  video.muted = true;
-  video.playsInline = true;
-  await new Promise((resolve) => video.addEventListener("loadeddata", resolve, { once: true }));
-  source = video;
-  await start(video, () => runVideo(video));
-});
-
-elements.stop.addEventListener("click", async () => {
-  release();
-  if (session) {
-    await fetch(apiUrl(`/v1/sessions/${session}`), { method: "DELETE" });
-    session = null;
-  }
-  elements.camera.disabled = false;
-  elements.file.disabled = false;
-  elements.finalize.disabled = true;
-  elements.stop.disabled = true;
-  status("session discarded");
-});
-
-elements.finalize.addEventListener("click", async () => {
-  running = false;
-  elements.finalize.disabled = true;
-  status("finalizing...");
-
-  const request = { workflow_stage: elements.workflowStage.value };
-  if (elements.useState.value) {
-    request.use_state = elements.useState.value;
-  }
-  if (elements.contamination.value) {
-    request.contamination_state = elements.contamination.value;
-  }
-
-  const response = await fetch(apiUrl(`/v1/sessions/${session}/finalize`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    status(`finalize failed (${response.status})`);
-    return;
-  }
-
-  const finalized = await response.json();
-  progress(1, true);
-  render(finalized);
-  release();
-
-  await fetch(apiUrl(`/v1/sessions/${session}`), { method: "DELETE" });
-  session = null;
-  elements.camera.disabled = false;
-  elements.file.disabled = false;
-  elements.stop.disabled = true;
-});
-
-function render(finalized) {
-  if (!finalized.items.length) {
-    status(`${finalized.frame_count} frames, nothing tracked long enough to count`);
-    elements.results.innerHTML = "";
-    return;
-  }
-
-  status(`${finalized.frame_count} frames  ·  ${finalized.items.length} item classes`);
-
-  const table = document.createElement("table");
-  table.innerHTML =
-    "<thead><tr><th>ITEM CLASS</th><th>COUNT</th><th>ACTION</th></tr></thead>";
-  const body = document.createElement("tbody");
-
-  for (const item of finalized.items) {
-    const color = CLASS_COLORS[item.class_id % CLASS_COLORS.length];
-    const actionColor = ACTION_COLORS[item.action] || null;
-
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td style="border-left-color:${color}">${item.label}</td>
-      <td class="count">${item.count}</td>
-      <td class="action">${item.action ? item.action : "-"}</td>`;
-
-    if (actionColor) {
-      row.querySelector(".action").style.color = actionColor;
-    } else {
-      row.querySelector(".action").classList.add("none");
-    }
-    body.append(row);
-
-    // the reason matters most when no action came back, so the row that
-    // explains itself is the row that could not be decided
-    const detail = document.createElement("tr");
-    detail.className = "detail";
-    const missing = item.missing_fields.length
-      ? `: ${item.missing_fields.join(", ")}`
-      : "";
-    detail.innerHTML = `
-      <td style="border-left-color:${color}"></td>
-      <td colspan="2">${item.outcome} · ${item.reason}${missing}</td>`;
-    body.append(detail);
-  }
-
-  table.append(body);
-  elements.results.replaceChildren(table);
-}
-
-window.addEventListener("beforeunload", () => {
-  release();
-  if (session) {
-    fetch(apiUrl(`/v1/sessions/${session}`), {
-      method: "DELETE",
-      keepalive: true,
+  setInitialBusy(true);
+  clearAlert();
+  try {
+    const video = document.createElement("video");
+    sourceUrl = URL.createObjectURL(file);
+    video.src = sourceUrl;
+    video.muted = true;
+    video.playsInline = true;
+    await new Promise(function (resolve, reject) {
+      video.addEventListener("loadeddata", resolve, { once: true });
+      video.addEventListener("error", function () {
+        reject(new Error("The selected video could not be opened."));
+      }, { once: true });
     });
+    await startCapture(video, runVideo, "video");
+  } catch (error) {
+    await failCapture(error);
   }
 });
+
+elements.overlayToggle.addEventListener("click", function () {
+  overlaysEnabled = !overlaysEnabled;
+  elements.overlayToggle.setAttribute("aria-pressed", String(overlaysEnabled));
+  elements.overlayToggle.textContent = overlaysEnabled ? "Overlays on" : "Overlays off";
+  if (source && source.readyState >= 2) {
+    draw(source, latestDetections);
+  }
+});
+
+elements.finishCapture.addEventListener("click", finishCapture);
+elements.discard.addEventListener("click", function () { void discardCurrentSession(true); });
+elements.backToScan.addEventListener("click", function () { void discardCurrentSession(true); });
+elements.contextForm.addEventListener("change", updateContextValidity);
+elements.contextForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+  void finalizeSession();
+});
+
+elements.newScan.addEventListener("click", function () {
+  resetSessionData();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  setInitialBusy(false);
+  setState("initial");
+});
+
+elements.downloadReport.addEventListener("click", downloadOperatorReport);
+elements.exportTechnical.addEventListener("click", exportTechnicalResults);
+elements.toggleDetails.addEventListener("click", function () {
+  const expanded = elements.toggleDetails.getAttribute("aria-expanded") === "true";
+  elements.toggleDetails.setAttribute("aria-expanded", String(!expanded));
+  elements.toggleDetails.textContent = expanded ? "View technical details" : "Hide technical details";
+  elements.technicalDetails.hidden = expanded;
+});
+
+window.addEventListener("beforeunload", function () {
+  releaseMedia();
+  if (session) {
+    fetch(apiUrl("/v1/sessions/" + session), { method: "DELETE", keepalive: true });
+  }
+});
+
+updateContextValidity();
+setState("initial", false);
 </script>
 </body>
 </html>
